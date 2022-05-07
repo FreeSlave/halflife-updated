@@ -1548,11 +1548,23 @@ bool CBaseMonster::BuildRoute(const Vector& vecGoal, int iMoveFlag, CBaseEntity*
 	// try to triangulate around any obstacles.
 	else if (iLocalMove != LOCALMOVE_INVALID_DONT_TRIANGULATE)
 	{
-		int triangDepth = TRIDEPTH;
+		int triangDepth = 1;
 		if (FBitSet(iMoveFlag, bits_MF_NO_TRIDEPTH))
 		{
 			ClearBits(iMoveFlag, bits_MF_NO_TRIDEPTH);
-			triangDepth = 1;
+		}
+		else
+		{
+			bool shouldApplyTridepth = m_MonsterState == MONSTERSTATE_SCRIPT;
+			if (!shouldApplyTridepth)
+			{
+				// you might have a better way to detect if monster is a player's follower in your SDK
+				shouldApplyTridepth = m_hTargetEnt != 0 && m_hTargetEnt->IsPlayer();
+			}
+			if (shouldApplyTridepth)
+			{
+				triangDepth = TRIDEPTH;
+			}
 		}
 		int result = FTriangulate(pev->origin, vecGoal, flDist, pTarget, vecApexes, triangDepth);
 		if (result)
