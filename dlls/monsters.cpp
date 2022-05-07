@@ -1548,7 +1548,13 @@ bool CBaseMonster::BuildRoute(const Vector& vecGoal, int iMoveFlag, CBaseEntity*
 	// try to triangulate around any obstacles.
 	else if (iLocalMove != LOCALMOVE_INVALID_DONT_TRIANGULATE)
 	{
-		int result = FTriangulate(pev->origin, vecGoal, flDist, pTarget, vecApexes, TRIDEPTH);
+		int triangDepth = TRIDEPTH;
+		if (FBitSet(iMoveFlag, bits_MF_NO_TRIDEPTH))
+		{
+			ClearBits(iMoveFlag, bits_MF_NO_TRIDEPTH);
+			triangDepth = 1;
+		}
+		int result = FTriangulate(pev->origin, vecGoal, flDist, pTarget, vecApexes, triangDepth);
 		if (result)
 		{
 			//ALERT(at_aiconsole, "Triangulated %d times\n", result);
@@ -2431,7 +2437,7 @@ bool CBaseMonster::BuildNearestRoute(Vector vecThreat, Vector vecViewOffset, flo
 				if (tr.flFraction == 1.0)
 				{
 					// try to actually get there
-					if (BuildRoute(node.m_vecOrigin, bits_MF_TO_LOCATION, NULL))
+					if (BuildRoute(node.m_vecOrigin, bits_MF_TO_LOCATION | bits_MF_NO_TRIDEPTH, NULL))
 					{
 						flMaxDist = flDist;
 						m_vecMoveGoal = node.m_vecOrigin;
