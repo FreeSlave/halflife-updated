@@ -228,7 +228,7 @@ public:
 	bool FRouteClear();
 	void RouteSimplify(CBaseEntity* pTargetEnt);
 	void AdvanceRoute(float distance);
-	virtual bool FTriangulate(const Vector& vecStart, const Vector& vecEnd, float flDist, CBaseEntity* pTargetEnt, Vector* pApex);
+	int FTriangulate(const Vector& vecStart, const Vector& vecEnd, float flDist, CBaseEntity* pTargetEnt, Vector* pApexes, int n = 1, int tries = 8, bool inner = false);
 	void MakeIdealYaw(Vector vecTarget);
 	virtual void SetYawSpeed() {} // allows different yaw_speeds for each activity
 	bool BuildRoute(const Vector& vecGoal, int iMoveFlag, CBaseEntity* pTarget);

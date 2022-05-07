@@ -143,7 +143,7 @@ void CBaseMonster::AdvanceRoute(float distance) {}
 int CBaseMonster::RouteClassify(int iMoveFlag) { return 0; }
 bool CBaseMonster::BuildRoute(const Vector& vecGoal, int iMoveFlag, CBaseEntity* pTarget) { return false; }
 void CBaseMonster::InsertWaypoint(Vector vecLocation, int afMoveFlags) {}
-bool CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, float flDist, CBaseEntity* pTargetEnt, Vector* pApex) { return false; }
+int CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, float flDist, CBaseEntity* pTargetEnt, Vector* pApexes, int n, int tries, bool inner) { return 0; }
 void CBaseMonster::Move(float flInterval) {}
 bool CBaseMonster::ShouldAdvanceRoute(float flWaypointDist) { return false; }
 void CBaseMonster::MoveExecute(CBaseEntity* pTargetEnt, const Vector& vecDir, float flInterval) {}

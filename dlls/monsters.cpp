@@ -1522,10 +1522,12 @@ int CBaseMonster::RouteClassify(int iMoveFlag)
 //=========================================================
 // BuildRoute
 //=========================================================
+#define TRIDEPTH 3
+
 bool CBaseMonster::BuildRoute(const Vector& vecGoal, int iMoveFlag, CBaseEntity* pTarget)
 {
 	float flDist;
-	Vector vecApex;
+	Vector vecApexes[TRIDEPTH];
 	int iLocalMove;
 
 	RouteNew();
@@ -1544,28 +1546,24 @@ bool CBaseMonster::BuildRoute(const Vector& vecGoal, int iMoveFlag, CBaseEntity*
 		return true;
 	}
 	// try to triangulate around any obstacles.
-	else if (iLocalMove != LOCALMOVE_INVALID_DONT_TRIANGULATE && FTriangulate(pev->origin, vecGoal, flDist, pTarget, &vecApex))
+	else if (iLocalMove != LOCALMOVE_INVALID_DONT_TRIANGULATE)
 	{
-		// there is a slightly more complicated path that allows the monster to reach vecGoal
-		m_Route[0].vecLocation = vecApex;
-		m_Route[0].iType = (iMoveFlag | bits_MF_TO_DETOUR);
+		int result = FTriangulate(pev->origin, vecGoal, flDist, pTarget, vecApexes, TRIDEPTH);
+		if (result)
+		{
+			//ALERT(at_aiconsole, "Triangulated %d times\n", result);
+			// there is a slightly more complicated path that allows the monster to reach vecGoal
+			for (int i=0; i<result; ++i)
+			{
+				m_Route[i].vecLocation = vecApexes[i];
+				m_Route[i].iType = (iMoveFlag | bits_MF_TO_DETOUR);
+			}
+			m_Route[result].vecLocation = vecGoal;
+			m_Route[result].iType = iMoveFlag | bits_MF_IS_GOAL;
 
-		m_Route[1].vecLocation = vecGoal;
-		m_Route[1].iType = iMoveFlag | bits_MF_IS_GOAL;
-
-		/*
-			WRITE_BYTE(MSG_BROADCAST, SVC_TEMPENTITY);
-			WRITE_BYTE(MSG_BROADCAST, TE_SHOWLINE);
-			WRITE_COORD(MSG_BROADCAST, vecApex.x );
-			WRITE_COORD(MSG_BROADCAST, vecApex.y );
-			WRITE_COORD(MSG_BROADCAST, vecApex.z );
-			WRITE_COORD(MSG_BROADCAST, vecApex.x );
-			WRITE_COORD(MSG_BROADCAST, vecApex.y );
-			WRITE_COORD(MSG_BROADCAST, vecApex.z + 128 );
-			*/
-
-		RouteSimplify(pTarget);
-		return true;
+			RouteSimplify( pTarget );
+			return true;
+		}
 	}
 
 	// last ditch, try nodes
@@ -1613,7 +1611,7 @@ void CBaseMonster::InsertWaypoint(Vector vecLocation, int afMoveFlags)
 // iApexDist is how far the obstruction that we are trying
 // to triangulate around is from the monster.
 //=========================================================
-bool CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, float flDist, CBaseEntity* pTargetEnt, Vector* pApex)
+int CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, float flDist, CBaseEntity* pTargetEnt, Vector* pApexes, int n, int tries, bool inner)
 {
 	Vector vecDir;
 	Vector vecForward;
@@ -1647,21 +1645,21 @@ bool CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, fl
 	// an apex point that insures that the monster is sufficiently past the obstacle before trying to turn back
 	// onto its original course.
 
-	vecLeft = pev->origin + (vecForward * (flDist + sizeX)) - vecDir * (sizeX * 3);
-	vecRight = pev->origin + (vecForward * (flDist + sizeX)) + vecDir * (sizeX * 3);
+	vecLeft = vecStart + ( vecForward * ( flDist + ( inner ? 0 : sizeX ) ) ) - vecDir * ( inner ? sizeX : sizeX * 3 );
+	vecRight = vecStart + ( vecForward * ( flDist + ( inner ? 0 : sizeX ) ) ) + vecDir * ( inner ? sizeX : sizeX * 3 );
 	if (pev->movetype == MOVETYPE_FLY)
 	{
-		vecTop = pev->origin + (vecForward * flDist) + (vecDirUp * sizeZ * 3);
-		vecBottom = pev->origin + (vecForward * flDist) - (vecDirUp * sizeZ * 3);
+		vecTop = vecStart + ( vecForward * flDist ) + ( vecDirUp * sizeZ * 3 );
+		vecBottom = vecStart + ( vecForward * flDist ) - ( vecDirUp *  sizeZ * 3 );
 	}
 
-	vecFarSide = m_Route[m_iRouteIndex].vecLocation;
+	vecFarSide = vecEnd;//m_Route[m_iRouteIndex].vecLocation; // since we use recursion these are not always the same anymore
 
 	vecDir = vecDir * sizeX * 2;
 	if (pev->movetype == MOVETYPE_FLY)
 		vecDirUp = vecDirUp * sizeZ * 2;
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < tries; i++)
 	{
 // Debug, Draw the triangulation
 #if 0
@@ -1711,58 +1709,102 @@ bool CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, fl
 		}
 #endif
 
-		if (CheckLocalMove(pev->origin, vecRight, pTargetEnt, NULL) == LOCALMOVE_VALID)
+		int result = 0;
+		float localMoveDist;
+		if (CheckLocalMove(vecStart, vecRight, pTargetEnt, &localMoveDist) == LOCALMOVE_VALID)
 		{
-			if (CheckLocalMove(vecRight, vecFarSide, pTargetEnt, NULL) == LOCALMOVE_VALID)
+			if (CheckLocalMove(vecRight, vecFarSide, pTargetEnt, &localMoveDist) == LOCALMOVE_VALID)
 			{
-				if (pApex)
+				if (pApexes)
 				{
-					*pApex = vecRight;
+					*pApexes = vecRight;
+				}
+
+				return 1;
+			}
+			else if (n>1 && pApexes)
+			{
+				result = FTriangulate(vecRight, vecFarSide, localMoveDist, pTargetEnt, pApexes+1, n-1, tries, true);
+				if (result)
+				{
+					*pApexes = vecRight;
+					return result+1;
+				}
+			}
+		}
+		else if (n>1 && pApexes)
+		{
+			result = FTriangulate(vecStart, vecRight, localMoveDist, pTargetEnt, pApexes, n-1, tries, true);
+			if (result)
+			{
+				if( CheckLocalMove( vecRight, vecFarSide, pTargetEnt, &localMoveDist ) == LOCALMOVE_VALID )
+				{
+					pApexes[n-1] = vecRight;
+					return result+1;
+				}
+			}
+		}
+		if (CheckLocalMove(vecStart, vecLeft, pTargetEnt, &localMoveDist) == LOCALMOVE_VALID)
+		{
+			if (CheckLocalMove(vecLeft, vecFarSide, pTargetEnt, &localMoveDist) == LOCALMOVE_VALID)
+			{
+				if (pApexes)
+				{
+					*pApexes = vecLeft;
 				}
 
 				return true;
 			}
-		}
-		if (CheckLocalMove(pev->origin, vecLeft, pTargetEnt, NULL) == LOCALMOVE_VALID)
-		{
-			if (CheckLocalMove(vecLeft, vecFarSide, pTargetEnt, NULL) == LOCALMOVE_VALID)
+			else if (n>1 && pApexes)
 			{
-				if (pApex)
+				result = FTriangulate(vecLeft, vecFarSide, localMoveDist, pTargetEnt, pApexes+1, n-1, tries, true);
+				if (result)
 				{
-					*pApex = vecLeft;
+					*pApexes = vecLeft;
+					return result+1;
 				}
-
-				return true;
+			}
+		}
+		else if (n>1 && pApexes)
+		{
+			result = FTriangulate(vecStart, vecLeft, localMoveDist, pTargetEnt, pApexes, n-1, tries, true);
+			if (result)
+			{
+				if( CheckLocalMove( vecLeft, vecFarSide, pTargetEnt, &localMoveDist ) == LOCALMOVE_VALID )
+				{
+					pApexes[n-1] = vecLeft;
+					return result+1;
+				}
 			}
 		}
 
 		if (pev->movetype == MOVETYPE_FLY)
 		{
-			if (CheckLocalMove(pev->origin, vecTop, pTargetEnt, NULL) == LOCALMOVE_VALID)
+			if (CheckLocalMove(vecStart, vecTop, pTargetEnt, NULL) == LOCALMOVE_VALID)
 			{
 				if (CheckLocalMove(vecTop, vecFarSide, pTargetEnt, NULL) == LOCALMOVE_VALID)
 				{
-					if (pApex)
+					if (pApexes)
 					{
-						*pApex = vecTop;
+						*pApexes = vecTop;
 						//ALERT(at_aiconsole, "triangulate over\n");
 					}
 
-					return true;
+					return 1;
 				}
 			}
 #if 1
-			if (CheckLocalMove(pev->origin, vecBottom, pTargetEnt, NULL) == LOCALMOVE_VALID)
+			if (CheckLocalMove(vecStart, vecBottom, pTargetEnt, NULL) == LOCALMOVE_VALID)
 			{
 				if (CheckLocalMove(vecBottom, vecFarSide, pTargetEnt, NULL) == LOCALMOVE_VALID)
 				{
-					if (pApex)
+					if (pApexes)
 					{
-						*pApex = vecBottom;
+						*pApexes = vecBottom;
 						//ALERT(at_aiconsole, "triangulate under\n");
 					}
 
-					return true;
+					return 1;
 				}
 			}
 #endif
@@ -1777,7 +1819,7 @@ bool CBaseMonster::FTriangulate(const Vector& vecStart, const Vector& vecEnd, fl
 		}
 	}
 
-	return false;
+	return 0;
 }
 
 //=========================================================
