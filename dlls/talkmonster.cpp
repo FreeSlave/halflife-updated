@@ -867,8 +867,11 @@ void CTalkMonster::Touch(CBaseEntity* pOther)
 		float speed = fabs(pOther->pev->velocity.x) + fabs(pOther->pev->velocity.y);
 		if (speed > 50)
 		{
-			SetConditions(bits_COND_CLIENT_PUSH);
-			MakeIdealYaw(pOther->pev->origin);
+			if (m_pSchedule != NULL && (m_pSchedule->iInterruptMask & bits_COND_CLIENT_PUSH))
+			{
+				SetConditions(bits_COND_CLIENT_PUSH);
+				MakeIdealYaw(pOther->pev->origin);
+			}
 		}
 	}
 }
