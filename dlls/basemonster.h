@@ -238,6 +238,7 @@ public:
 
 	bool FindLateralCover(const Vector& vecThreat, const Vector& vecViewOffset);
 	virtual bool FindCover(Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist);
+	bool FindRetreat(Vector vecThreat, float flMinDist, float flMaxDist);
 	virtual bool FValidateCover(const Vector& vecCoverLocation) { return true; }
 	virtual float CoverRadius() { return 784; } // Default cover radius
 
