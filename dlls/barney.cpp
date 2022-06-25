@@ -45,6 +45,7 @@ class CBarney : public CTalkMonster
 public:
 	void Spawn() override;
 	void Precache() override;
+	bool KeyValue(KeyValueData* pkvd) override;
 	void SetYawSpeed() override;
 	int ISoundMask() override;
 	void BarneyFirePistol();
@@ -84,6 +85,8 @@ public:
 
 	// UNDONE: What is this for?  It isn't used?
 	float m_flPlayerDamage; // how much pain has the player inflicted on me?
+	
+	int m_iHead;
 
 	CUSTOM_SCHEDULES;
 };
@@ -97,6 +100,7 @@ TYPEDESCRIPTION CBarney::m_SaveData[] =
 		DEFINE_FIELD(CBarney, m_checkAttackTime, FIELD_TIME),
 		DEFINE_FIELD(CBarney, m_lastAttackCheck, FIELD_BOOLEAN),
 		DEFINE_FIELD(CBarney, m_flPlayerDamage, FIELD_FLOAT),
+		DEFINE_FIELD(CBarney, m_iHead, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CBarney, CTalkMonster);
@@ -389,11 +393,26 @@ void CBarney::HandleAnimEvent(MonsterEvent_t* pEvent)
 	}
 }
 
+bool CBarney::KeyValue(KeyValueData* pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "head"))
+	{
+		m_iHead = atoi(pkvd->szValue);
+		return true;
+	}
+	else return CTalkMonster::KeyValue(pkvd);
+}
+
 //=========================================================
 // Spawn
 //=========================================================
 void CBarney::Spawn()
 {
+	if (m_iHead < 0)
+	{
+		m_iHead = RANDOM_LONG(0,2);
+	}
+	
 	Precache();
 
 	SET_MODEL(ENT(pev), "models/barney.mdl");
@@ -408,6 +427,8 @@ void CBarney::Spawn()
 	m_MonsterState = MONSTERSTATE_NONE;
 
 	pev->body = 0; // gun in holster
+	
+	SetBodygroup(2, m_iHead);
 	m_fGunDrawn = false;
 
 	m_afCapability = bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
@@ -472,8 +493,18 @@ void CBarney::TalkInit()
 	m_szGrp[TLK_WOUND] = "BA_WOUND";
 	m_szGrp[TLK_MORTAL] = "BA_MORTAL";
 
-	// get voice for head - just one barney voice for now
-	m_voicePitch = 100;
+	switch(m_iHead)
+	{
+		case 1:
+			m_voicePitch = 80;
+			break;
+		case 2:
+			m_voicePitch = 120;
+			break;
+		default:
+			m_voicePitch = 100;
+			break;
+	}
 }
 
 
