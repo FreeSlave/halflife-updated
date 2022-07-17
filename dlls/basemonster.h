@@ -109,6 +109,8 @@ public:
 
 	float m_flLastYawTime;
 
+	short m_freeRoam;
+
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 
@@ -188,6 +190,7 @@ public:
 	virtual void RunTask(Task_t* pTask);
 	virtual Schedule_t* GetScheduleOfType(int Type);
 	virtual Schedule_t* GetSchedule();
+	Schedule_t* GetFreeroamSchedule();
 	virtual void ScheduleChange() {}
 	// virtual bool CanPlaySequence() { return ((m_pCine == NULL) && (m_MonsterState == MONSTERSTATE_NONE || m_MonsterState == MONSTERSTATE_IDLE || m_IdealMonsterState == MONSTERSTATE_IDLE)); }
 	virtual bool CanPlaySequence(bool fDisregardState, int interruptLevel);
@@ -358,3 +361,7 @@ public:
 
 	CBaseEntity* DropItem(const char* pszItemName, const Vector& vecPos, const Vector& vecAng); // drop an item.
 };
+
+#define FREEROAM_MAPDEFAULT 0
+#define FREEROAM_NEVER 1
+#define FREEROAM_ALWAYS 2

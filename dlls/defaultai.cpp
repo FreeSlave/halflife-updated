@@ -893,6 +893,33 @@ Schedule_t slTakeCoverFromEnemy[] =
 			"tlTakeCoverFromEnemy"},
 };
 
+Task_t tlFreeroam[] =
+{
+	{ TASK_STOP_MOVING, (float)0 },
+	{ TASK_WAIT_RANDOM, 0.5f },
+	{ TASK_GET_PATH_TO_FREEROAM_NODE, (float)0 },
+	{ TASK_WALK_PATH, (float)0 },
+	{ TASK_WAIT_FOR_MOVEMENT, (float)0 },
+	{ TASK_SET_ACTIVITY, (float)ACT_IDLE },
+	{ TASK_WAIT, 0.5f },
+	{ TASK_WAIT_RANDOM, 0.5f },
+	{ TASK_WAIT_PVS, (float)0 },
+};
+
+Schedule_t slFreeroam[] =
+{
+	{
+		tlFreeroam,
+		ARRAYSIZE( tlFreeroam ),
+		bits_COND_NEW_ENEMY |
+		bits_COND_LIGHT_DAMAGE |
+		bits_COND_HEAVY_DAMAGE |
+		bits_COND_HEAR_SOUND,
+		bits_SOUND_DANGER,
+		"Free Roaming"
+	},
+};
+
 Schedule_t* CBaseMonster::m_scheduleList[] =
 	{
 		slIdleStand,
@@ -932,6 +959,7 @@ Schedule_t* CBaseMonster::m_scheduleList[] =
 		slTakeCoverFromOrigin,
 		slTakeCoverFromBestSound,
 		slTakeCoverFromEnemy,
+		slFreeroam,
 		slFail};
 
 Schedule_t* CBaseMonster::ScheduleFromName(const char* pName)
@@ -1128,6 +1156,10 @@ Schedule_t* CBaseMonster::GetScheduleOfType(int Type)
 	case SCHED_VICTORY_DANCE:
 	{
 		return &slVictoryDance[0];
+	}
+	case SCHED_FREEROAM:
+	{
+		return slFreeroam;
 	}
 	case SCHED_FAIL:
 	{

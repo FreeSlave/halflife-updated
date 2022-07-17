@@ -38,6 +38,8 @@ CGlobalState gGlobalState;
 
 extern void W_Precache();
 
+bool CWorld::gFreeRoaming = false;
+
 //
 // This must match the list in util.h
 //
@@ -471,6 +473,7 @@ LINK_ENTITY_TO_CLASS(worldspawn, CWorld);
 #define SF_WORLD_DARK 0x0001	  // Fade from black at startup
 #define SF_WORLD_TITLE 0x0002	  // Display game title at startup
 #define SF_WORLD_FORCETEAM 0x0004 // Force teams
+#define SF_WORLD_FREEROAM	0x0008		// Monsters freeroaming by default
 
 void CWorld::Spawn()
 {
@@ -661,6 +664,15 @@ void CWorld::Precache()
 	{
 		CVAR_SET_FLOAT("mp_defaultteam", 0);
 	}
+	
+	if ((pev->spawnflags & SF_WORLD_FREEROAM) != 0)
+	{
+		gFreeRoaming = true;
+	}
+	else
+	{
+		gFreeRoaming = false;
+	}
 }
 
 
@@ -733,6 +745,13 @@ bool CWorld::KeyValue(KeyValueData* pkvd)
 		}
 		return true;
 	}
-
+	else if ( FStrEq( pkvd->szKeyName, "freeroam" ) )
+	{
+		if (atoi( pkvd->szValue ))
+		{
+			pev->spawnflags |= SF_WORLD_FREEROAM;
+		}
+		return true;
+	}
 	return CBaseEntity::KeyValue(pkvd);
 }

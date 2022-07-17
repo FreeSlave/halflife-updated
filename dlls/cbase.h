@@ -759,6 +759,8 @@ public:
 	void Spawn() override;
 	void Precache() override;
 	bool KeyValue(KeyValueData* pkvd) override;
+	
+	static bool gFreeRoaming;
 };
 
 inline DLL_GLOBAL edict_t* g_pBodyQueueHead = nullptr;
