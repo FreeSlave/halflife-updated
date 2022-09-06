@@ -2585,6 +2585,22 @@ void CBasePlayer::PostThink()
 	UpdatePlayerSound();
 
 pt_end:
+	if (!m_bSentMessage)
+	{
+		m_bSentMessage = true;
+		CBaseEntity* sci = UTIL_FindEntityByTargetname(NULL, "scientist1");
+		if (sci)
+		{
+			Vector center = sci->Center();
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY );
+			WRITE_BYTE( TE_TAREXPLOSION );
+			WRITE_COORD(center.x);
+			WRITE_COORD(center.y);
+			WRITE_COORD(center.z);
+			MESSAGE_END();
+		}
+	}
+
 #if defined(CLIENT_WEAPONS)
 	// Decay timers on weapons
 	// go through all of the weapons and make a list of the ones to pack
